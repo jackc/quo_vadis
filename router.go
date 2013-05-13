@@ -33,7 +33,7 @@ func (r *Router) addRouteFromSegments(segments []string, handler func(http.Respo
 	}
 }
 
-func (r *Router) addRoute(path string, handler func(http.ResponseWriter, *http.Request)) {
+func (r *Router) AddRoute(path string, handler func(http.ResponseWriter, *http.Request)) {
 	segments := segmentizePath(path)
 	r.addRouteFromSegments(segments, handler)
 }
