@@ -5,6 +5,30 @@ import (
 	"testing"
 )
 
+var benchmarkRouter *Router
+
+func getBenchmarkRouter() *Router {
+	if benchmarkRouter != nil {
+		return benchmarkRouter
+	}
+
+	benchmarkRouter := NewRouter()
+	handler := func(http.ResponseWriter, *http.Request) {}
+	benchmarkRouter.AddRoute("/", handler)
+	benchmarkRouter.AddRoute("/foo", handler)
+	benchmarkRouter.AddRoute("/foo/bar", handler)
+	benchmarkRouter.AddRoute("/foo/baz", handler)
+	benchmarkRouter.AddRoute("/people", handler)
+	benchmarkRouter.AddRoute("/people/search", handler)
+	benchmarkRouter.AddRoute("/people/:id", handler)
+	benchmarkRouter.AddRoute("/users", handler)
+	benchmarkRouter.AddRoute("/users/:id", handler)
+	benchmarkRouter.AddRoute("/widgets", handler)
+	benchmarkRouter.AddRoute("/widgets/important", handler)
+
+	return benchmarkRouter
+}
+
 func TestSegmentizePath(t *testing.T) {
 	test := func(path string, expected []string) {
 		actual := segmentizePath(path)
@@ -50,5 +74,29 @@ func TestRouterFindHandler(t *testing.T) {
 
 	if _, present := router.FindHandler(segmentizePath("/foo/missing")); present {
 		t.Error("Missing route was erroneously found")
+	}
+}
+
+func BenchmarkFindHandlerRoot(b *testing.B) {
+	router := getBenchmarkRouter()
+
+	for i := 0; i < b.N; i++ {
+		router.FindHandler(segmentizePath("/"))
+	}
+}
+
+func BenchmarkFindHandlerSingleLevel(b *testing.B) {
+	router := getBenchmarkRouter()
+
+	for i := 0; i < b.N; i++ {
+		router.FindHandler(segmentizePath("/foo"))
+	}
+}
+
+func BenchmarkFindHandlerSecondLevel(b *testing.B) {
+	router := getBenchmarkRouter()
+
+	for i := 0; i < b.N; i++ {
+		router.FindHandler(segmentizePath("/people/search"))
 	}
 }
