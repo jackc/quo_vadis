@@ -1,6 +1,7 @@
 package router
 
 import (
+	"net/http"
 	"testing"
 )
 
@@ -28,7 +29,26 @@ func TestSegmentizePath(t *testing.T) {
 	test("/foo/bar/baz", []string{"foo", "bar", "baz"})
 }
 
-func TestRouting(t *testing.T) {
-	//router := NewRouter()
+func TestRouterFindHandler(t *testing.T) {
+	router := NewRouter()
 
+	if _, present := router.FindHandler(segmentizePath("/missing")); present {
+		t.Error("Missing route was erroneously found")
+	}
+
+	handler := func(http.ResponseWriter, *http.Request) {}
+	router.AddRoute("/foo", handler)
+
+	if _, present := router.FindHandler(segmentizePath("/foo")); !present {
+		t.Error("Did not find route when route was expected")
+	}
+
+	router.AddRoute("/foo/bar/baz", handler)
+	if _, present := router.FindHandler(segmentizePath("/foo/bar/baz")); !present {
+		t.Error("Did not find route when route was expected")
+	}
+
+	if _, present := router.FindHandler(segmentizePath("/foo/missing")); present {
+		t.Error("Missing route was erroneously found")
+	}
 }
