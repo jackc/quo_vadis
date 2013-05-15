@@ -1,7 +1,9 @@
 package router
 
 import (
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -53,28 +55,40 @@ func TestSegmentizePath(t *testing.T) {
 	test("/foo/bar/baz", []string{"foo", "bar", "baz"})
 }
 
-func TestRouterFindHandler(t *testing.T) {
+func TestRouter(t *testing.T) {
 	router := NewRouter()
 
-	if _, present := router.FindHandler(segmentizePath("/missing")); present {
-		t.Error("Missing route was erroneously found")
+	rootHandler := func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "root")
+	}
+	router.AddRoute("/", rootHandler)
+
+	widgetIndexHandler := func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "widgetIndex")
+	}
+	router.AddRoute("/widget", widgetIndexHandler)
+
+	get := func(path string, expectedCode int, expectedBody string) {
+		response := httptest.NewRecorder()
+		request, err := http.NewRequest("GET", "http://example.com"+path, nil)
+		if err != nil {
+			t.Errorf("Unable to create test GET request for %v", path)
+		}
+
+		router.ServeHTTP(response, request)
+		if response.Code != expectedCode {
+			t.Errorf("GET %v: expected HTTP code %v, received %v", path, expectedCode, response.Code)
+		}
+		if response.Body.String() != expectedBody {
+			t.Errorf("GET %v: expected HTTP response body \"%v\", received \"%v\"", path, expectedBody, response.Body.String())
+		}
 	}
 
-	handler := func(http.ResponseWriter, *http.Request) {}
-	router.AddRoute("/foo", handler)
+	get("/", 200, "root")
+	get("/widget", 200, "widgetIndex")
 
-	if _, present := router.FindHandler(segmentizePath("/foo")); !present {
-		t.Error("Did not find route when route was expected")
-	}
-
-	router.AddRoute("/foo/bar/baz", handler)
-	if _, present := router.FindHandler(segmentizePath("/foo/bar/baz")); !present {
-		t.Error("Did not find route when route was expected")
-	}
-
-	if _, present := router.FindHandler(segmentizePath("/foo/missing")); present {
-		t.Error("Missing route was erroneously found")
-	}
+	get("/missing", 404, "404 Not Found")
+	get("/widget/missing", 404, "404 Not Found")
 }
 
 func BenchmarkFindHandlerRoot(b *testing.B) {

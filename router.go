@@ -1,7 +1,7 @@
 package router
 
 import (
-	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -16,7 +16,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if handler, ok := r.FindHandler(segments); ok {
 		handler(w, req)
 	} else {
-		fmt.Fprintf(w, "Path: %s\nNot Found", req.URL.Path)
+		w.WriteHeader(404)
+		io.WriteString(w, "404 Not Found")
 	}
 }
 
