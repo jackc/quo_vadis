@@ -17,18 +17,18 @@ func getBenchmarkRouter() *Router {
 
 	benchmarkRouter := NewRouter()
 	handler := func(http.ResponseWriter, *http.Request) {}
-	benchmarkRouter.AddRoute("/", handler)
-	benchmarkRouter.AddRoute("/foo", handler)
-	benchmarkRouter.AddRoute("/foo/bar", handler)
-	benchmarkRouter.AddRoute("/foo/baz", handler)
-	benchmarkRouter.AddRoute("/foo/bar/baz/quz", handler)
-	benchmarkRouter.AddRoute("/people", handler)
-	benchmarkRouter.AddRoute("/people/search", handler)
-	benchmarkRouter.AddRoute("/people/?", handler)
-	benchmarkRouter.AddRoute("/users", handler)
-	benchmarkRouter.AddRoute("/users/?", handler)
-	benchmarkRouter.AddRoute("/widgets", handler)
-	benchmarkRouter.AddRoute("/widgets/important", handler)
+	benchmarkRouter.AddRoute("GET", "/", handler)
+	benchmarkRouter.AddRoute("GET", "/foo", handler)
+	benchmarkRouter.AddRoute("GET", "/foo/bar", handler)
+	benchmarkRouter.AddRoute("GET", "/foo/baz", handler)
+	benchmarkRouter.AddRoute("GET", "/foo/bar/baz/quz", handler)
+	benchmarkRouter.AddRoute("GET", "/people", handler)
+	benchmarkRouter.AddRoute("GET", "/people/search", handler)
+	benchmarkRouter.AddRoute("GET", "/people/?", handler)
+	benchmarkRouter.AddRoute("GET", "/users", handler)
+	benchmarkRouter.AddRoute("GET", "/users/?", handler)
+	benchmarkRouter.AddRoute("GET", "/widgets", handler)
+	benchmarkRouter.AddRoute("GET", "/widgets/important", handler)
 
 	return benchmarkRouter
 }
@@ -63,17 +63,17 @@ func TestRouter(t *testing.T) {
 	rootHandler := func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "root")
 	}
-	router.AddRoute("/", rootHandler)
+	router.AddRoute("GET", "/", rootHandler)
 
 	widgetIndexHandler := func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "widgetIndex")
 	}
-	router.AddRoute("/widget", widgetIndexHandler)
+	router.AddRoute("GET", "/widget", widgetIndexHandler)
 
 	widgetShowHandler := func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "widgetShow")
 	}
-	router.AddRoute("/widget/?", widgetShowHandler)
+	router.AddRoute("GET", "/widget/?", widgetShowHandler)
 
 	get := func(path string, expectedCode int, expectedBody string) {
 		response := httptest.NewRecorder()
@@ -103,7 +103,7 @@ func BenchmarkFindHandlerRoot(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler(segmentizePath("/"))
+		router.FindHandler("GET", segmentizePath("/"))
 	}
 }
 
@@ -111,7 +111,7 @@ func BenchmarkFindHandlerSegment1(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler(segmentizePath("/foo"))
+		router.FindHandler("GET", segmentizePath("/foo"))
 	}
 }
 
@@ -119,7 +119,7 @@ func BenchmarkFindHandlerSegment2(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler(segmentizePath("/people/search"))
+		router.FindHandler("GET", segmentizePath("/people/search"))
 	}
 }
 
@@ -127,7 +127,7 @@ func BenchmarkFindHandlerSegment2Placeholder(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler(segmentizePath("/people/1"))
+		router.FindHandler("GET", segmentizePath("/people/1"))
 	}
 }
 
@@ -135,6 +135,6 @@ func BenchmarkFindHandlerSegment4(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler(segmentizePath("/foo/bar/baz/quz"))
+		router.FindHandler("GET", segmentizePath("/foo/bar/baz/quz"))
 	}
 }
