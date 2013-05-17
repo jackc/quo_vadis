@@ -21,11 +21,12 @@ func getBenchmarkRouter() *Router {
 	benchmarkRouter.AddRoute("/foo", handler)
 	benchmarkRouter.AddRoute("/foo/bar", handler)
 	benchmarkRouter.AddRoute("/foo/baz", handler)
+	benchmarkRouter.AddRoute("/foo/bar/baz/quz", handler)
 	benchmarkRouter.AddRoute("/people", handler)
 	benchmarkRouter.AddRoute("/people/search", handler)
-	benchmarkRouter.AddRoute("/people/:id", handler)
+	benchmarkRouter.AddRoute("/people/?", handler)
 	benchmarkRouter.AddRoute("/users", handler)
-	benchmarkRouter.AddRoute("/users/:id", handler)
+	benchmarkRouter.AddRoute("/users/?", handler)
 	benchmarkRouter.AddRoute("/widgets", handler)
 	benchmarkRouter.AddRoute("/widgets/important", handler)
 
@@ -106,7 +107,7 @@ func BenchmarkFindHandlerRoot(b *testing.B) {
 	}
 }
 
-func BenchmarkFindHandlerSingleLevel(b *testing.B) {
+func BenchmarkFindHandlerSegment1(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
@@ -114,10 +115,26 @@ func BenchmarkFindHandlerSingleLevel(b *testing.B) {
 	}
 }
 
-func BenchmarkFindHandlerSecondLevel(b *testing.B) {
+func BenchmarkFindHandlerSegment2(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
 		router.FindHandler(segmentizePath("/people/search"))
+	}
+}
+
+func BenchmarkFindHandlerSegment2Placeholder(b *testing.B) {
+	router := getBenchmarkRouter()
+
+	for i := 0; i < b.N; i++ {
+		router.FindHandler(segmentizePath("/people/1"))
+	}
+}
+
+func BenchmarkFindHandlerSegment4(b *testing.B) {
+	router := getBenchmarkRouter()
+
+	for i := 0; i < b.N; i++ {
+		router.FindHandler(segmentizePath("/foo/bar/baz/quz"))
 	}
 }
