@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -68,6 +69,11 @@ func TestRouter(t *testing.T) {
 	}
 	router.AddRoute("/widget", widgetIndexHandler)
 
+	widgetShowHandler := func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "widgetShow")
+	}
+	router.AddRoute("/widget/?", widgetShowHandler)
+
 	get := func(path string, expectedCode int, expectedBody string) {
 		response := httptest.NewRecorder()
 		request, err := http.NewRequest("GET", "http://example.com"+path, nil)
@@ -86,9 +92,10 @@ func TestRouter(t *testing.T) {
 
 	get("/", 200, "root")
 	get("/widget", 200, "widgetIndex")
+	get("/widget/1", 200, "widgetShow")
 
 	get("/missing", 404, "404 Not Found")
-	get("/widget/missing", 404, "404 Not Found")
+	get("/widget/1/missing", 404, "404 Not Found")
 }
 
 func BenchmarkFindHandlerRoot(b *testing.B) {

@@ -9,6 +9,7 @@ import (
 type Router struct {
 	handler        func(http.ResponseWriter, *http.Request)
 	staticHandlers map[string]*Router
+	placeholder    *Router
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -24,11 +25,19 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (r *Router) addRouteFromSegments(segments []string, handler func(http.ResponseWriter, *http.Request)) {
 	if len(segments) > 0 {
 		head, tail := segments[0], segments[1:]
-		if _, present := r.staticHandlers[head]; !present {
-			r.staticHandlers[head] = NewRouter()
+		var subrouter *Router
+		if head == "?" {
+			if r.placeholder == nil {
+				r.placeholder = NewRouter()
+			}
+			subrouter = r.placeholder
+		} else {
+			if _, present := r.staticHandlers[head]; !present {
+				r.staticHandlers[head] = NewRouter()
+			}
+			subrouter = r.staticHandlers[head]
 		}
-		r.staticHandlers[head].addRouteFromSegments(tail, handler)
-
+		subrouter.addRouteFromSegments(tail, handler)
 	} else {
 		r.handler = handler
 	}
@@ -44,6 +53,8 @@ func (r *Router) FindHandler(segments []string) (handler func(http.ResponseWrite
 		head, tail := segments[0], segments[1:]
 		if subrouter, present := r.staticHandlers[head]; present {
 			return subrouter.FindHandler(tail)
+		} else if r.placeholder != nil {
+			return r.placeholder.FindHandler(tail)
 		}
 	} else {
 		if r.handler != nil {
