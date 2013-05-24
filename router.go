@@ -56,6 +56,26 @@ func (r *Router) AddRoute(method string, path string, handler http.Handler) {
 	r.addRouteFromSegments(method, segments, endpoint)
 }
 
+func (r *Router) Get(path string, handler http.Handler) {
+	r.AddRoute("GET", path, handler)
+}
+
+func (r *Router) Post(path string, handler http.Handler) {
+	r.AddRoute("POST", path, handler)
+}
+
+func (r *Router) Put(path string, handler http.Handler) {
+	r.AddRoute("PUT", path, handler)
+}
+
+func (r *Router) Patch(path string, handler http.Handler) {
+	r.AddRoute("PATCH", path, handler)
+}
+
+func (r *Router) Delete(path string, handler http.Handler) {
+	r.AddRoute("DELETE", path, handler)
+}
+
 func (r *Router) FindEndpoint(method string, segments, matchedPlaceholders []string) (*Endpoint, []string, bool) {
 	if len(segments) > 0 {
 		head, tail := segments[0], segments[1:]
