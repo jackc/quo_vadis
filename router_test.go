@@ -57,17 +57,17 @@ func TestSegmentizePath(t *testing.T) {
 	test("/foo/bar/baz", []string{"foo", "bar", "baz"})
 }
 
-func TestExtractPlaceholderNames(t *testing.T) {
+func TestExtractParameterNames(t *testing.T) {
 	test := func(segments []string, expected []string) {
-		actual := extractPlaceholderNames(segments)
+		actual := extractParameterNames(segments)
 		if len(actual) != len(expected) {
-			t.Errorf("Expected \"%v\" to have %v placeholders, but it actually had %v", segments, expected, actual)
+			t.Errorf("Expected \"%v\" to have %v parameters, but it actually had %v", segments, expected, actual)
 			return
 		}
 
 		for i := 0; i < len(actual); i++ {
 			if actual[i] != expected[i] {
-				t.Errorf("Expected \"%v\" to have %v placeholders, but it actually had %v", segments, expected, actual)
+				t.Errorf("Expected \"%v\" to have %v parameters, but it actually had %v", segments, expected, actual)
 				return
 			}
 		}
