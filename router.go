@@ -1,3 +1,4 @@
+// Quo Vadis is a really simple and fast HTTP router
 package quo_vadis
 
 import (
@@ -17,6 +18,10 @@ type Router struct {
 	parameterBranch *Router
 }
 
+// ServeHTTP makes Router implement standard http.Handler
+//
+// ServeHTTP will rewrite the req.URL.RawQuery to include any path arguments so
+// they can be treated as traditional query parameters.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	segments := segmentizePath(req.URL.Path)
 	if endpoint, arguments, ok := r.findEndpoint(req.Method, segments, []string{}); ok {
@@ -49,6 +54,12 @@ func (r *Router) addRouteFromSegments(method string, segments []string, endpoint
 	}
 }
 
+// AddRoute adds a route for the given HTTP method, path, and handler. path can
+// contain parameterized segments. The parameters will be added to the query
+// string for requests will routing.
+//
+// r.AddRoute("GET", "/people", peopleIndexHandler) --> Only matched /people
+// r.AddRoute("GET", "/people/:id", peopleIndexHandler) --> matches /people/*
 func (r *Router) AddRoute(method string, path string, handler http.Handler) {
 	segments := segmentizePath(path)
 	parameters := extractParameterNames(segments)
@@ -56,22 +67,27 @@ func (r *Router) AddRoute(method string, path string, handler http.Handler) {
 	r.addRouteFromSegments(method, segments, endpoint)
 }
 
+// Get is a shortcut for AddRoute("GET", path, handler)
 func (r *Router) Get(path string, handler http.Handler) {
 	r.AddRoute("GET", path, handler)
 }
 
+// Post is a shortcut for AddRoute("POST", path, handler)
 func (r *Router) Post(path string, handler http.Handler) {
 	r.AddRoute("POST", path, handler)
 }
 
+// Put is a shortcut for AddRoute("PUT", path, handler)
 func (r *Router) Put(path string, handler http.Handler) {
 	r.AddRoute("PUT", path, handler)
 }
 
+// Patch is a shortcut for AddRoute("PATCH", path, handler)
 func (r *Router) Patch(path string, handler http.Handler) {
 	r.AddRoute("PATCH", path, handler)
 }
 
+// Delete is a shortcut for AddRoute("DELETE", path, handler)
 func (r *Router) Delete(path string, handler http.Handler) {
 	r.AddRoute("DELETE", path, handler)
 }
