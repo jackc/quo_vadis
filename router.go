@@ -6,13 +6,13 @@ import (
 	"strings"
 )
 
-type Endpoint struct {
+type endpoint struct {
 	handler    http.Handler
 	parameters []string
 }
 
 type Router struct {
-	methodEndpoints map[string]*Endpoint
+	methodEndpoints map[string]*endpoint
 	staticBranches  map[string]*Router
 	parameterBranch *Router
 }
@@ -28,7 +28,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (r *Router) addRouteFromSegments(method string, segments []string, endpoint *Endpoint) {
+func (r *Router) addRouteFromSegments(method string, segments []string, endpoint *endpoint) {
 	if len(segments) > 0 {
 		head, tail := segments[0], segments[1:]
 		var subrouter *Router
@@ -52,7 +52,7 @@ func (r *Router) addRouteFromSegments(method string, segments []string, endpoint
 func (r *Router) AddRoute(method string, path string, handler http.Handler) {
 	segments := segmentizePath(path)
 	parameters := extractParameterNames(segments)
-	endpoint := &Endpoint{handler: handler, parameters: parameters}
+	endpoint := &endpoint{handler: handler, parameters: parameters}
 	r.addRouteFromSegments(method, segments, endpoint)
 }
 
@@ -76,7 +76,7 @@ func (r *Router) Delete(path string, handler http.Handler) {
 	r.AddRoute("DELETE", path, handler)
 }
 
-func (r *Router) FindEndpoint(method string, segments, pathArguments []string) (*Endpoint, []string, bool) {
+func (r *Router) FindEndpoint(method string, segments, pathArguments []string) (*endpoint, []string, bool) {
 	if len(segments) > 0 {
 		head, tail := segments[0], segments[1:]
 		if subrouter, present := r.staticBranches[head]; present {
@@ -120,7 +120,7 @@ func addRouteArgumentsToRequest(names, values []string, req *http.Request) {
 
 func NewRouter() (r *Router) {
 	r = new(Router)
-	r.methodEndpoints = make(map[string]*Endpoint)
+	r.methodEndpoints = make(map[string]*endpoint)
 	r.staticBranches = make(map[string]*Router)
 	return
 }
