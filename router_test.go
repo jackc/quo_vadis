@@ -2,7 +2,6 @@ package quo_vadis
 
 import (
 	"fmt"
-	"github.com/bmizerany/pat"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +16,7 @@ func getBenchmarkRouter() *Router {
 	}
 
 	benchmarkRouter := NewRouter()
-	handler := func(http.ResponseWriter, *http.Request) {}
+	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	benchmarkRouter.AddRoute("GET", "/", handler)
 	benchmarkRouter.AddRoute("GET", "/foo", handler)
 	benchmarkRouter.AddRoute("GET", "/foo/bar", handler)
@@ -25,9 +24,9 @@ func getBenchmarkRouter() *Router {
 	benchmarkRouter.AddRoute("GET", "/foo/bar/baz/quz", handler)
 	benchmarkRouter.AddRoute("GET", "/people", handler)
 	benchmarkRouter.AddRoute("GET", "/people/search", handler)
-	benchmarkRouter.AddRoute("GET", "/people/?", handler)
+	benchmarkRouter.AddRoute("GET", "/people/:id", handler)
 	benchmarkRouter.AddRoute("GET", "/users", handler)
-	benchmarkRouter.AddRoute("GET", "/users/?", handler)
+	benchmarkRouter.AddRoute("GET", "/users/:id", handler)
 	benchmarkRouter.AddRoute("GET", "/widgets", handler)
 	benchmarkRouter.AddRoute("GET", "/widgets/important", handler)
 
@@ -58,23 +57,50 @@ func TestSegmentizePath(t *testing.T) {
 	test("/foo/bar/baz", []string{"foo", "bar", "baz"})
 }
 
+func TestExtractPlaceholderNames(t *testing.T) {
+	test := func(segments []string, expected []string) {
+		actual := extractPlaceholderNames(segments)
+		if len(actual) != len(expected) {
+			t.Errorf("Expected \"%v\" to have %v placeholders, but it actually had %v", segments, expected, actual)
+			return
+		}
+
+		for i := 0; i < len(actual); i++ {
+			if actual[i] != expected[i] {
+				t.Errorf("Expected \"%v\" to have %v placeholders, but it actually had %v", segments, expected, actual)
+				return
+			}
+		}
+	}
+
+	test([]string{}, []string{})
+	test([]string{"foo"}, []string{})
+	test([]string{"foo", ":id"}, []string{"id"})
+	test([]string{"foo", ":id", "edit"}, []string{"id"})
+}
+
 func TestRouter(t *testing.T) {
 	router := NewRouter()
 
-	rootHandler := func(w http.ResponseWriter, r *http.Request) {
+	rootHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "root")
-	}
+	})
 	router.AddRoute("GET", "/", rootHandler)
 
-	widgetIndexHandler := func(w http.ResponseWriter, r *http.Request) {
+	widgetIndexHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "widgetIndex")
-	}
+	})
 	router.AddRoute("GET", "/widget", widgetIndexHandler)
 
-	widgetShowHandler := func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "widgetShow")
-	}
-	router.AddRoute("GET", "/widget/?", widgetShowHandler)
+	widgetShowHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "widgetShow: %v", r.URL.Query().Get("id"))
+	})
+	router.AddRoute("GET", "/widget/:id", widgetShowHandler)
+
+	widgetEditHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "widgetEdit: %v", r.URL.Query().Get("id"))
+	})
+	router.AddRoute("GET", "/widget/:id/edit", widgetEditHandler)
 
 	get := func(path string, expectedCode int, expectedBody string) {
 		response := httptest.NewRecorder()
@@ -94,7 +120,8 @@ func TestRouter(t *testing.T) {
 
 	get("/", 200, "root")
 	get("/widget", 200, "widgetIndex")
-	get("/widget/1", 200, "widgetShow")
+	get("/widget/1", 200, "widgetShow: 1")
+	get("/widget/1/edit", 200, "widgetEdit: 1")
 
 	get("/missing", 404, "404 Not Found")
 	get("/widget/1/missing", 404, "404 Not Found")
@@ -122,42 +149,42 @@ func BenchmarkRoutedRequest(b *testing.B) {
 	}
 }
 
-func BenchmarkFindHandlerRoot(b *testing.B) {
+func BenchmarkFindEndpointRoot(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler("GET", segmentizePath("/"))
+		router.FindEndpoint("GET", segmentizePath("/"), []string{})
 	}
 }
 
-func BenchmarkFindHandlerSegment1(b *testing.B) {
+func BenchmarkFindEndpointSegment1(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler("GET", segmentizePath("/foo"))
+		router.FindEndpoint("GET", segmentizePath("/foo"), []string{})
 	}
 }
 
-func BenchmarkFindHandlerSegment2(b *testing.B) {
+func BenchmarkFindEndpointSegment2(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler("GET", segmentizePath("/people/search"))
+		router.FindEndpoint("GET", segmentizePath("/people/search"), []string{})
 	}
 }
 
-func BenchmarkFindHandlerSegment2Placeholder(b *testing.B) {
+func BenchmarkFindEndpointSegment2Placeholder(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler("GET", segmentizePath("/people/1"))
+		router.FindEndpoint("GET", segmentizePath("/people/1"), []string{})
 	}
 }
 
-func BenchmarkFindHandlerSegment4(b *testing.B) {
+func BenchmarkFindEndpointSegment4(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindHandler("GET", segmentizePath("/foo/bar/baz/quz"))
+		router.FindEndpoint("GET", segmentizePath("/foo/bar/baz/quz"), []string{})
 	}
 }
