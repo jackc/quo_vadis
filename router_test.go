@@ -2,6 +2,7 @@ package quo_vadis
 
 import (
 	"fmt"
+	"github.com/bmizerany/pat"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -97,6 +98,28 @@ func TestRouter(t *testing.T) {
 
 	get("/missing", 404, "404 Not Found")
 	get("/widget/1/missing", 404, "404 Not Found")
+}
+
+func getBench(b *testing.B, handler http.Handler, path string, expectedCode int) {
+	response := httptest.NewRecorder()
+	request, err := http.NewRequest("GET", "http://example.com"+path, nil)
+	if err != nil {
+		b.Fatalf("Unable to create test GET request for %v", path)
+	}
+
+	handler.ServeHTTP(response, request)
+	if response.Code != expectedCode {
+		b.Fatalf("GET %v: expected HTTP code %v, received %v", path, expectedCode, response.Code)
+	}
+}
+
+func BenchmarkRoutedRequest(b *testing.B) {
+	router := getBenchmarkRouter()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		getBench(b, router, "/widgets/important", 200)
+	}
 }
 
 func BenchmarkFindHandlerRoot(b *testing.B) {
