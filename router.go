@@ -19,7 +19,7 @@ type Router struct {
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	segments := segmentizePath(req.URL.Path)
-	if endpoint, arguments, ok := r.FindEndpoint(req.Method, segments, []string{}); ok {
+	if endpoint, arguments, ok := r.findEndpoint(req.Method, segments, []string{}); ok {
 		addRouteArgumentsToRequest(endpoint.parameters, arguments, req)
 		endpoint.handler.ServeHTTP(w, req)
 	} else {
@@ -76,14 +76,14 @@ func (r *Router) Delete(path string, handler http.Handler) {
 	r.AddRoute("DELETE", path, handler)
 }
 
-func (r *Router) FindEndpoint(method string, segments, pathArguments []string) (*endpoint, []string, bool) {
+func (r *Router) findEndpoint(method string, segments, pathArguments []string) (*endpoint, []string, bool) {
 	if len(segments) > 0 {
 		head, tail := segments[0], segments[1:]
 		if subrouter, present := r.staticBranches[head]; present {
-			return subrouter.FindEndpoint(method, tail, pathArguments)
+			return subrouter.findEndpoint(method, tail, pathArguments)
 		} else if r.parameterBranch != nil {
 			pathArguments = append(pathArguments, head)
-			return r.parameterBranch.FindEndpoint(method, tail, pathArguments)
+			return r.parameterBranch.findEndpoint(method, tail, pathArguments)
 		} else {
 			return nil, nil, false
 		}

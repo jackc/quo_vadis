@@ -153,7 +153,7 @@ func BenchmarkFindEndpointRoot(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindEndpoint("GET", segmentizePath("/"), []string{})
+		router.findEndpoint("GET", segmentizePath("/"), []string{})
 	}
 }
 
@@ -161,7 +161,7 @@ func BenchmarkFindEndpointSegment1(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindEndpoint("GET", segmentizePath("/foo"), []string{})
+		router.findEndpoint("GET", segmentizePath("/foo"), []string{})
 	}
 }
 
@@ -169,7 +169,7 @@ func BenchmarkFindEndpointSegment2(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindEndpoint("GET", segmentizePath("/people/search"), []string{})
+		router.findEndpoint("GET", segmentizePath("/people/search"), []string{})
 	}
 }
 
@@ -177,7 +177,7 @@ func BenchmarkFindEndpointSegment2Placeholder(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindEndpoint("GET", segmentizePath("/people/1"), []string{})
+		router.findEndpoint("GET", segmentizePath("/people/1"), []string{})
 	}
 }
 
@@ -185,6 +185,6 @@ func BenchmarkFindEndpointSegment4(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.FindEndpoint("GET", segmentizePath("/foo/bar/baz/quz"), []string{})
+		router.findEndpoint("GET", segmentizePath("/foo/bar/baz/quz"), []string{})
 	}
 }
