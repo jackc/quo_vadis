@@ -108,11 +108,13 @@ func TestRouter(t *testing.T) {
 	r := NewRouter()
 	r.AddRoute("GET", "/", stubHandler("root"))
 	r.AddRoute("GET", "/widget", stubHandler("widgetIndex"))
+	r.AddRoute("POST", "/widget", stubHandler("widgetCreate"))
 	r.AddRoute("GET", "/widget/:id", stubHandler("widgetShow"))
 	r.AddRoute("GET", "/widget/:id/edit", stubHandler("widgetEdit"))
 
 	testRequest(t, r, "GET", "/", 200, "root")
 	testRequest(t, r, "GET", "/widget", 200, "widgetIndex")
+	testRequest(t, r, "POST", "/widget", 200, "widgetCreate")
 	testRequest(t, r, "GET", "/widget/1", 200, "widgetShow id: 1")
 	testRequest(t, r, "GET", "/widget/1/edit", 200, "widgetEdit id: 1")
 
