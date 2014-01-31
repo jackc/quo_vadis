@@ -120,6 +120,9 @@ func TestRouter(t *testing.T) {
 
 	testRequest(t, r, "GET", "/missing", 404, "404 Not Found")
 	testRequest(t, r, "GET", "/widget/1/missing", 404, "404 Not Found")
+
+	r.NotFoundHandler = stubHandler("Custom Not Found")
+	testRequest(t, r, "GET", "/missing", 200, "Custom Not Found")
 }
 
 func getBench(b *testing.B, handler http.Handler, path string, expectedCode int) {
@@ -148,7 +151,7 @@ func BenchmarkFindEndpointRoot(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.findEndpoint("GET", segmentizePath("/"), []string{})
+		router.root.findEndpoint("GET", segmentizePath("/"), []string{})
 	}
 }
 
@@ -156,7 +159,7 @@ func BenchmarkFindEndpointSegment1(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.findEndpoint("GET", segmentizePath("/foo"), []string{})
+		router.root.findEndpoint("GET", segmentizePath("/foo"), []string{})
 	}
 }
 
@@ -164,7 +167,7 @@ func BenchmarkFindEndpointSegment2(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.findEndpoint("GET", segmentizePath("/people/search"), []string{})
+		router.root.findEndpoint("GET", segmentizePath("/people/search"), []string{})
 	}
 }
 
@@ -172,7 +175,7 @@ func BenchmarkFindEndpointSegment2Placeholder(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.findEndpoint("GET", segmentizePath("/people/1"), []string{})
+		router.root.findEndpoint("GET", segmentizePath("/people/1"), []string{})
 	}
 }
 
@@ -180,6 +183,6 @@ func BenchmarkFindEndpointSegment4(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.findEndpoint("GET", segmentizePath("/foo/bar/baz/quz"), []string{})
+		router.root.findEndpoint("GET", segmentizePath("/foo/bar/baz/quz"), []string{})
 	}
 }

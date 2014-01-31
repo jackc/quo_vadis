@@ -12,10 +12,15 @@ type endpoint struct {
 	parameters []string
 }
 
-type Router struct {
+type node struct {
 	methodEndpoints map[string]*endpoint
-	staticBranches  map[string]*Router
-	parameterBranch *Router
+	staticBranches  map[string]*node
+	parameterBranch *node
+}
+
+type Router struct {
+	root            *node
+	NotFoundHandler http.Handler
 }
 
 // ServeHTTP makes Router implement standard http.Handler
@@ -24,33 +29,11 @@ type Router struct {
 // they can be treated as traditional query parameters.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	segments := segmentizePath(req.URL.Path)
-	if endpoint, arguments, ok := r.findEndpoint(req.Method, segments, []string{}); ok {
+	if endpoint, arguments, ok := r.root.findEndpoint(req.Method, segments, []string{}); ok {
 		addRouteArgumentsToRequest(endpoint.parameters, arguments, req)
 		endpoint.handler.ServeHTTP(w, req)
 	} else {
-		w.WriteHeader(404)
-		io.WriteString(w, "404 Not Found")
-	}
-}
-
-func (r *Router) addRouteFromSegments(method string, segments []string, endpoint *endpoint) {
-	if len(segments) > 0 {
-		head, tail := segments[0], segments[1:]
-		var subrouter *Router
-		if strings.HasPrefix(head, ":") {
-			if r.parameterBranch == nil {
-				r.parameterBranch = NewRouter()
-			}
-			subrouter = r.parameterBranch
-		} else {
-			if _, present := r.staticBranches[head]; !present {
-				r.staticBranches[head] = NewRouter()
-			}
-			subrouter = r.staticBranches[head]
-		}
-		subrouter.addRouteFromSegments(method, tail, endpoint)
-	} else {
-		r.methodEndpoints[method] = endpoint
+		r.NotFoundHandler.ServeHTTP(w, req)
 	}
 }
 
@@ -64,7 +47,7 @@ func (r *Router) AddRoute(method string, path string, handler http.Handler) {
 	segments := segmentizePath(path)
 	parameters := extractParameterNames(segments)
 	endpoint := &endpoint{handler: handler, parameters: parameters}
-	r.addRouteFromSegments(method, segments, endpoint)
+	r.root.addRouteFromSegments(method, segments, endpoint)
 }
 
 // Get is a shortcut for AddRoute("GET", path, handler)
@@ -92,19 +75,40 @@ func (r *Router) Delete(path string, handler http.Handler) {
 	r.AddRoute("DELETE", path, handler)
 }
 
-func (r *Router) findEndpoint(method string, segments, pathArguments []string) (*endpoint, []string, bool) {
+func (n *node) addRouteFromSegments(method string, segments []string, endpoint *endpoint) {
 	if len(segments) > 0 {
 		head, tail := segments[0], segments[1:]
-		if subrouter, present := r.staticBranches[head]; present {
-			return subrouter.findEndpoint(method, tail, pathArguments)
-		} else if r.parameterBranch != nil {
+		var subnode *node
+		if strings.HasPrefix(head, ":") {
+			if n.parameterBranch == nil {
+				n.parameterBranch = newNode()
+			}
+			subnode = n.parameterBranch
+		} else {
+			if _, present := n.staticBranches[head]; !present {
+				n.staticBranches[head] = newNode()
+			}
+			subnode = n.staticBranches[head]
+		}
+		subnode.addRouteFromSegments(method, tail, endpoint)
+	} else {
+		n.methodEndpoints[method] = endpoint
+	}
+}
+
+func (n *node) findEndpoint(method string, segments, pathArguments []string) (*endpoint, []string, bool) {
+	if len(segments) > 0 {
+		head, tail := segments[0], segments[1:]
+		if subnode, present := n.staticBranches[head]; present {
+			return subnode.findEndpoint(method, tail, pathArguments)
+		} else if n.parameterBranch != nil {
 			pathArguments = append(pathArguments, head)
-			return r.parameterBranch.findEndpoint(method, tail, pathArguments)
+			return n.parameterBranch.findEndpoint(method, tail, pathArguments)
 		} else {
 			return nil, nil, false
 		}
 	}
-	endpoint, present := r.methodEndpoints[method]
+	endpoint, present := n.methodEndpoints[method]
 	return endpoint, pathArguments, present
 }
 
@@ -134,9 +138,21 @@ func addRouteArgumentsToRequest(names, values []string, req *http.Request) {
 	req.URL.RawQuery = query.Encode()
 }
 
+func newNode() (n *node) {
+	n = new(node)
+	n.methodEndpoints = make(map[string]*endpoint)
+	n.staticBranches = make(map[string]*node)
+	return
+}
+
 func NewRouter() (r *Router) {
 	r = new(Router)
-	r.methodEndpoints = make(map[string]*endpoint)
-	r.staticBranches = make(map[string]*Router)
+	r.root = newNode()
+	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 	return
+}
+
+func notFoundHandler(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(404)
+	io.WriteString(w, "404 Not Found")
 }
