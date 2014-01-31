@@ -88,7 +88,7 @@ func stubHandler(responseBody string) http.Handler {
 	})
 }
 
-func testRequest(t *testing.T, router *Router, method string, path string, expectedCode int, expectedBody string) {
+func testRequest(t *testing.T, router *Router, method string, path string, expectedCode int, expectedBody string) *httptest.ResponseRecorder {
 	response := httptest.NewRecorder()
 	request, err := http.NewRequest(method, "http://example.com"+path, nil)
 	if err != nil {
@@ -102,6 +102,8 @@ func testRequest(t *testing.T, router *Router, method string, path string, expec
 	if response.Body.String() != expectedBody {
 		t.Errorf("%s %s: expected HTTP response body \"%s\", received \"%s\"", method, path, expectedBody, response.Body.String())
 	}
+
+	return response
 }
 
 func TestRouter(t *testing.T) {
@@ -123,6 +125,19 @@ func TestRouter(t *testing.T) {
 
 	r.NotFoundHandler = stubHandler("Custom Not Found")
 	testRequest(t, r, "GET", "/missing", 200, "Custom Not Found")
+}
+
+func TestRouterMethodNotAllowed(t *testing.T) {
+	r := NewRouter()
+	r.AddRoute("GET", "/", stubHandler("root"))
+
+	response := testRequest(t, r, "BADMETHOD", "/", 405, "405 Method Not Allowed")
+	if response.HeaderMap["Allow"][0] != "GET" {
+		t.Errorf(`Expected Allow header to be "GET" but it was %v`, response.HeaderMap["Allow"])
+	}
+
+	r.MethodNotAllowedHandler = stubHandler("Custom Method Not Allowed")
+	testRequest(t, r, "BADMETHOD", "/", 200, "Custom Method Not Allowed")
 }
 
 func getBench(b *testing.B, handler http.Handler, path string, expectedCode int) {
@@ -147,42 +162,42 @@ func BenchmarkRoutedRequest(b *testing.B) {
 	}
 }
 
-func BenchmarkFindEndpointRoot(b *testing.B) {
+func BenchmarkFindNodeRoot(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.root.findEndpoint("GET", segmentizePath("/"), []string{})
+		router.root.findNode(segmentizePath("/"), []string{})
 	}
 }
 
-func BenchmarkFindEndpointSegment1(b *testing.B) {
+func BenchmarkFindNodeSegment1(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.root.findEndpoint("GET", segmentizePath("/foo"), []string{})
+		router.root.findNode(segmentizePath("/foo"), []string{})
 	}
 }
 
-func BenchmarkFindEndpointSegment2(b *testing.B) {
+func BenchmarkFindNodeSegment2(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.root.findEndpoint("GET", segmentizePath("/people/search"), []string{})
+		router.root.findNode(segmentizePath("/people/search"), []string{})
 	}
 }
 
-func BenchmarkFindEndpointSegment2Placeholder(b *testing.B) {
+func BenchmarkFindNodeSegment2Placeholder(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.root.findEndpoint("GET", segmentizePath("/people/1"), []string{})
+		router.root.findNode(segmentizePath("/people/1"), []string{})
 	}
 }
 
-func BenchmarkFindEndpointSegment4(b *testing.B) {
+func BenchmarkFindNodeSegment4(b *testing.B) {
 	router := getBenchmarkRouter()
 
 	for i := 0; i < b.N; i++ {
-		router.root.findEndpoint("GET", segmentizePath("/foo/bar/baz/quz"), []string{})
+		router.root.findNode(segmentizePath("/foo/bar/baz/quz"), []string{})
 	}
 }

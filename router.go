@@ -19,8 +19,9 @@ type node struct {
 }
 
 type Router struct {
-	root            *node
-	NotFoundHandler http.Handler
+	root                    *node
+	NotFoundHandler         http.Handler
+	MethodNotAllowedHandler http.Handler
 }
 
 // ServeHTTP makes Router implement standard http.Handler
@@ -29,9 +30,13 @@ type Router struct {
 // they can be treated as traditional query parameters.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	segments := segmentizePath(req.URL.Path)
-	if endpoint, arguments, ok := r.root.findEndpoint(req.Method, segments, []string{}); ok {
-		addRouteArgumentsToRequest(endpoint.parameters, arguments, req)
-		endpoint.handler.ServeHTTP(w, req)
+	if node, arguments, ok := r.root.findNode(segments, []string{}); ok {
+		if endpoint, present := node.methodEndpoints[req.Method]; present {
+			addRouteArgumentsToRequest(endpoint.parameters, arguments, req)
+			endpoint.handler.ServeHTTP(w, req)
+		} else {
+			r.MethodNotAllowedHandler.ServeHTTP(w, req)
+		}
 	} else {
 		r.NotFoundHandler.ServeHTTP(w, req)
 	}
@@ -96,20 +101,19 @@ func (n *node) addRouteFromSegments(method string, segments []string, endpoint *
 	}
 }
 
-func (n *node) findEndpoint(method string, segments, pathArguments []string) (*endpoint, []string, bool) {
+func (n *node) findNode(segments, pathArguments []string) (*node, []string, bool) {
 	if len(segments) > 0 {
 		head, tail := segments[0], segments[1:]
 		if subnode, present := n.staticBranches[head]; present {
-			return subnode.findEndpoint(method, tail, pathArguments)
+			return subnode.findNode(tail, pathArguments)
 		} else if n.parameterBranch != nil {
 			pathArguments = append(pathArguments, head)
-			return n.parameterBranch.findEndpoint(method, tail, pathArguments)
+			return n.parameterBranch.findNode(tail, pathArguments)
 		} else {
 			return nil, nil, false
 		}
 	}
-	endpoint, present := n.methodEndpoints[method]
-	return endpoint, pathArguments, present
+	return n, pathArguments, true
 }
 
 func segmentizePath(path string) (segments []string) {
@@ -149,10 +153,16 @@ func NewRouter() (r *Router) {
 	r = new(Router)
 	r.root = newNode()
 	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
+	r.MethodNotAllowedHandler = http.HandlerFunc(methodNotAllowedHandler)
 	return
 }
 
 func notFoundHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(404)
 	io.WriteString(w, "404 Not Found")
+}
+
+func methodNotAllowedHandler(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(405)
+	io.WriteString(w, "405 Method Not Allowed")
 }
