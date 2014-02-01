@@ -20,8 +20,8 @@ type node struct {
 
 type Router struct {
 	root                    *node
-	NotFoundHandler         http.Handler
-	MethodNotAllowedHandler http.Handler
+	NotFoundHandler         http.Handler // Handler to call if no path matches request
+	MethodNotAllowedHandler http.Handler // Handler to call if the path does not respond to the request method
 }
 
 // ServeHTTP makes Router implement standard http.Handler
@@ -34,12 +34,19 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if endpoint, present := node.methodEndpoints[req.Method]; present {
 			addRouteArgumentsToRequest(endpoint.parameters, arguments, req)
 			endpoint.handler.ServeHTTP(w, req)
-		} else {
+			return
+		} else if len(node.methodEndpoints) > 0 {
+			var allowedMethods []string
+			for m, _ := range node.methodEndpoints {
+				allowedMethods = append(allowedMethods, m)
+			}
+			w.Header()["Allow"] = []string{strings.Join(allowedMethods, ", ")}
 			r.MethodNotAllowedHandler.ServeHTTP(w, req)
+			return
 		}
-	} else {
-		r.NotFoundHandler.ServeHTTP(w, req)
 	}
+
+	r.NotFoundHandler.ServeHTTP(w, req)
 }
 
 // AddRoute adds a route for the given HTTP method, path, and handler. path can

@@ -130,11 +130,19 @@ func TestRouter(t *testing.T) {
 func TestRouterMethodNotAllowed(t *testing.T) {
 	r := NewRouter()
 	r.AddRoute("GET", "/", stubHandler("root"))
+	r.AddRoute("POST", "/", stubHandler("root"))
+	r.AddRoute("GET", "/foo/bar", stubHandler("foobar"))
 
 	response := testRequest(t, r, "BADMETHOD", "/", 405, "405 Method Not Allowed")
-	if response.HeaderMap["Allow"][0] != "GET" {
-		t.Errorf(`Expected Allow header to be "GET" but it was %v`, response.HeaderMap["Allow"])
+	if len(response.HeaderMap["Allow"]) == 0 {
+		t.Fatal("Expected Allow header, but it was not set")
 	}
+	if response.HeaderMap["Allow"][0] != "GET, POST" {
+		t.Errorf(`Expected Allow header to be "GET, POST" but it was %v`, response.HeaderMap["Allow"][0])
+	}
+
+	testRequest(t, r, "GET", "/foo", 404, "404 Not Found")
+	testRequest(t, r, "BADMETHOD", "/foo", 404, "404 Not Found")
 
 	r.MethodNotAllowedHandler = stubHandler("Custom Method Not Allowed")
 	testRequest(t, r, "BADMETHOD", "/", 200, "Custom Method Not Allowed")
